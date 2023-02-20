@@ -19,9 +19,7 @@ if TYPE_CHECKING:
 
 def force_decimal(amount: object) -> Decimal:
     """Given an amount of unknown type, type cast it to be a Decimal."""
-    if not isinstance(amount, Decimal):
-        return Decimal(str(amount))
-    return amount
+    return amount if isinstance(amount, Decimal) else Decimal(str(amount))
 
 
 class Currency:
@@ -74,9 +72,7 @@ class Currency:
 
         Consider using get_name() instead, or babel.numbers.get_currency_name()
         """
-        if self._name is not None:
-            return self._name
-        return self.get_name("en_US")
+        return self._name if self._name is not None else self.get_name("en_US")
 
     def get_name(self, locale: str, count: int | None = None) -> str:
         from babel.numbers import get_currency_name
@@ -243,16 +239,15 @@ class Money:
     def __mul__(self: M, other: object) -> M:
         if isinstance(other, Money):
             raise TypeError("Cannot multiply two Money instances.")
-        else:
-            if isinstance(other, float):
-                warnings.warn(
-                    "Multiplying Money instances with floats is deprecated",
-                    DeprecationWarning,
-                )
-            return self.__class__(
-                amount=(self.amount * force_decimal(other)),
-                currency=self.currency,
+        if isinstance(other, float):
+            warnings.warn(
+                "Multiplying Money instances with floats is deprecated",
+                DeprecationWarning,
             )
+        return self.__class__(
+            amount=(self.amount * force_decimal(other)),
+            currency=self.currency,
+        )
 
     def __truediv__(self: M, other: object) -> M | Decimal:
         if isinstance(other, Money):
@@ -280,7 +275,7 @@ class Money:
         if ndigits is None:
             ndigits = 0
         return self.__class__(
-            amount=self.amount.quantize(Decimal("1e" + str(-ndigits))),
+            amount=self.amount.quantize(Decimal(f"1e{str(-ndigits)}")),
             currency=self.currency,
         )
 
@@ -305,16 +300,15 @@ class Money:
         """
         if isinstance(other, Money):
             raise TypeError("Invalid __rmod__ operation")
-        else:
-            if isinstance(other, float):
-                warnings.warn(
-                    "Calculating percentages of Money instances using floats is deprecated",
-                    DeprecationWarning,
-                )
-            return self.__class__(
-                amount=(Decimal(str(other)) * self.amount / 100),
-                currency=self.currency,
+        if isinstance(other, float):
+            warnings.warn(
+                "Calculating percentages of Money instances using floats is deprecated",
+                DeprecationWarning,
             )
+        return self.__class__(
+            amount=(Decimal(str(other)) * self.amount / 100),
+            currency=self.currency,
+        )
 
     __radd__ = __add__
     __rmul__ = __mul__
@@ -395,9 +389,7 @@ def get_currency(*, iso: int | str) -> Currency:
 
 def get_currency(code: str | None = None, iso: int | str | None = None) -> Currency:
     try:
-        if iso:
-            return CURRENCIES_BY_ISO[str(iso)]
-        return CURRENCIES[code]  # type: ignore[index]
+        return CURRENCIES_BY_ISO[str(iso)] if iso else CURRENCIES[code]
     except KeyError:
         raise CurrencyDoesNotExist(code)
 
